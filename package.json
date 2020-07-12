@@ -4,6 +4,10 @@
   "description": "Tiny Router for Solid",
   "main": "dist/main.cjs.js",
   "module": "dist/main.esm.js",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist",
     "types"
