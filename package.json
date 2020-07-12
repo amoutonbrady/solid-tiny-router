@@ -1,5 +1,5 @@
 {
-  "name": "tiny-solid-router",
+  "name": "@amoutonbrady/solid-tiny-router",
   "version": "0.0.0",
   "description": "Tiny Router for Solid",
   "main": "dist/main.cjs.js",
