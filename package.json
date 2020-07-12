@@ -5,6 +5,7 @@
   "main": "dist/main.cjs.js",
   "module": "dist/main.esm.js",
   "private": false,
+  "types": "types/main.d.ts",
   "publishConfig": {
     "access": "public"
   },
