@@ -4,6 +4,7 @@ import {
   Component,
   useContext,
   Show,
+  createComponent,
 } from "solid-js";
 
 import match from "regexparam";
@@ -33,8 +34,11 @@ export const Router: Component = (props) => {
     setRouterState("currentRoute", location);
   });
 
-  return () =>
-    RouterContext.Provider({ value: store, children: props.children });
+  return createComponent(
+    RouterContext.Provider,
+    { value: store, children: () => props.children },
+    ["children"]
+  );
 };
 
 export const Route: Component<{ path: string }> = (props) => {
@@ -45,13 +49,13 @@ export const Route: Component<{ path: string }> = (props) => {
   return () => (isActiveRoute() ? props.children : false);
 };
 
-export const Link: Component<{ path: string }> = ({ path, children }) => {
+export const Link: Component<{ path: string }> = (props) => {
   const [_, { push }] = useRouter();
-  const handleClick = () => push(path);
+  const handleClick = () => push(props.path);
 
   return (
-    <a href={path} onClick={prevent(handleClick)}>
-      {children}
+    <a href={props.path} onClick={prevent(handleClick)}>
+      {props.children}
     </a>
   );
 };
