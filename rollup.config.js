@@ -1,6 +1,5 @@
 import { babel } from "@rollup/plugin-babel";
 import resolve from "@rollup/plugin-node-resolve";
-import { terser } from "rollup-plugin-terser";
 
 const extensions = [".tsx"];
 
@@ -8,18 +7,18 @@ const extensions = [".tsx"];
  * @type {import('rollup').RollupOptions}
  */
 const config = {
-  input: "src/main.tsx",
+  input: "src/solid-tiny-router.tsx",
   treeshake: true,
   external: ["solid-js", "solid-js/dom", "history", "regexparam"],
   output: [
     {
       name: "solid-tiny-router",
-      file: "dist/main.cjs.js",
+      file: "dist/solid-tiny-router.cjs.js",
       format: "cjs",
     },
     {
       name: "solid-tiny-router",
-      file: "dist/main.esm.js",
+      file: "dist/solid-tiny-router.esm.js",
       format: "esm",
     },
   ],
@@ -32,7 +31,6 @@ const config = {
       babelHelpers: "bundled",
       extensions,
     }),
-    terser(),
   ],
 };
 
