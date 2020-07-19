@@ -51,7 +51,7 @@ export type LinkProps = { path: string } & JSX.AnchorHTMLAttributes<
 >;
 
 export const Link: Component<LinkProps> = (props) => {
-  const [p, ...others] = splitProps(props, ["path"]);
+  const [p, others] = splitProps(props, ["path"]);
   const [_, { push }] = useRouter();
   const handleClick = () => push(p.path);
 
