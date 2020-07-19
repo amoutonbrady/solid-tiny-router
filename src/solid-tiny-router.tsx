@@ -1,4 +1,11 @@
-import { createContext, createState, Component, useContext } from "solid-js";
+import {
+  createContext,
+  createState,
+  Component,
+  useContext,
+  splitProps,
+} from "solid-js";
+import { spread } from "solid-js/dom";
 
 import match from "regexparam";
 import { createBrowserHistory } from "history";
@@ -39,15 +46,26 @@ export const Route: Component<{ path: string }> = (props) => {
   return () => (isActiveRoute() ? props.children : false);
 };
 
-export const Link: Component<{ path: string }> = (props) => {
-  const [_, { push }] = useRouter();
-  const handleClick = () => push(props.path);
+export type LinkProps = { path: string } & JSX.AnchorHTMLAttributes<
+  HTMLAnchorElement
+>;
 
-  return (
-    <a href={props.path} onClick={prevent(handleClick)}>
-      {props.children}
-    </a>
-  );
+export const Link: Component<LinkProps> = (props) => {
+  const [p, ...others] = splitProps(props, ["path"]);
+  const [_, { push }] = useRouter();
+  const handleClick = () => push(p.path);
+
+  return () => {
+    const el = (
+      <a href={p.path} onClick={prevent(handleClick)}>
+        {props.children}
+      </a>
+    );
+
+    spread(el as Element, others);
+
+    return el;
+  };
 };
 
 function prevent(fn: (event: Event) => any) {
