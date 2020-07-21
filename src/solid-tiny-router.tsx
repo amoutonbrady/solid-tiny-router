@@ -8,9 +8,9 @@ import {
 import { spread } from "solid-js/dom";
 
 import match from "regexparam";
-import { createBrowserHistory } from "history";
+import { createHistory } from "./history";
 
-const browser = createBrowserHistory();
+const browser = createHistory();
 const currentRoute = browser.location;
 const [routerState, setRouterState] = createState({ currentRoute });
 
@@ -30,9 +30,7 @@ export function useRouter() {
 }
 
 export const Router: Component = (props) => {
-  browser.listen(({ location }) => {
-    setRouterState("currentRoute", location);
-  });
+  browser.listen((url) => setRouterState("currentRoute", url));
 
   return () =>
     RouterContext.Provider({ value: store, children: props.children });

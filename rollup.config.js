@@ -1,7 +1,7 @@
 import { babel } from "@rollup/plugin-babel";
 import resolve from "@rollup/plugin-node-resolve";
 
-const extensions = [".tsx"];
+const extensions = [".tsx", ".ts"];
 
 /**
  * @type {import('rollup').RollupOptions}
@@ -9,7 +9,7 @@ const extensions = [".tsx"];
 const config = {
   input: "src/solid-tiny-router.tsx",
   treeshake: true,
-  external: ["solid-js", "solid-js/dom", "history", "regexparam"],
+  external: [/@babel\/runtime/, /solid-js/, /regexparam/, /mitt/],
   output: [
     {
       name: "solid-tiny-router",
@@ -27,9 +27,11 @@ const config = {
       extensions,
     }),
     babel({
-      presets: ["babel-preset-solid", "@babel/preset-typescript"],
-      babelHelpers: "bundled",
       extensions,
+      babelHelpers: "runtime",
+      exclude: "node_modules/**",
+      presets: ["babel-preset-solid", "@babel/preset-typescript"],
+      plugins: ["@babel/plugin-transform-runtime"],
     }),
   ],
 };
