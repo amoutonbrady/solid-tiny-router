@@ -4,6 +4,7 @@ import {
   Component,
   useContext,
   splitProps,
+  createEffect,
 } from "solid-js";
 import { spread } from "solid-js/dom";
 
@@ -12,14 +13,17 @@ import { createHistory } from "./history";
 
 const browser = createHistory();
 const currentRoute = browser.location;
-const [routerState, setRouterState] = createState({ currentRoute });
+const [routerState, setRouterState] = createState<{
+  currentRoute: URL;
+  params: Record<string, string | null>;
+}>({ currentRoute, params: {} });
 
 const store = [
   routerState,
   {
-    push(path: string) {
-      browser.push(path);
-    },
+    push: (path: string) => browser.push(path),
+    setParams: (params: Record<string, string | null>) =>
+      setRouterState("params", params),
   },
 ] as const;
 
@@ -37,9 +41,16 @@ export const Router: Component = (props) => {
 };
 
 export const Route: Component<{ path: string }> = (props) => {
-  const [router] = useRouter();
-  const routeMatcher = match(props.path).pattern;
-  const isActiveRoute = () => !!routeMatcher.test(router.currentRoute.pathname);
+  const [router, { setParams }] = useRouter();
+  const routeMatcher = match(props.path);
+  const isActiveRoute = () =>
+    !!routeMatcher.pattern.test(router.currentRoute.pathname);
+
+  createEffect(() => {
+    if (!isActiveRoute()) return;
+    const params = exec(props.path, routeMatcher);
+    if (params) setParams(params);
+  });
 
   return () => (isActiveRoute() ? props.children : false);
 };
@@ -66,9 +77,32 @@ export const Link: Component<LinkProps> = (props) => {
   };
 };
 
+// HELPERS
 function prevent(fn: (event: Event) => any) {
   return (event: Event) => {
     event.preventDefault();
     fn(event);
   };
 }
+
+// Adapted from here: https://github.com/lukeed/regexparam#usage
+function exec(path: string, result: OverloadedReturnType<typeof match>) {
+  let i = 0;
+  const out: Record<string, string | null> = {};
+  const matches = result.pattern.exec(path);
+  if (!result.keys || !matches) return {};
+
+  while (i < result.keys.length) {
+    out[result.keys[i]] = matches[++i] || null;
+  }
+
+  return out;
+}
+
+// Utility types from: https://stackoverflow.com/a/52761156
+// prettier-ignore
+type OverloadedReturnType<T> = 
+    T extends { (...args: any[]) : infer R; (...args: any[]) : infer R; (...args: any[]) : infer R ; (...args: any[]) : infer R } ? R  :
+    T extends { (...args: any[]) : infer R; (...args: any[]) : infer R; (...args: any[]) : infer R } ? R  :
+    T extends { (...args: any[]) : infer R; (...args: any[]) : infer R } ? R  :
+    T extends (...args: any[]) => infer R ? R : any
