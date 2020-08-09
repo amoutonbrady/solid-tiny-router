@@ -136,8 +136,8 @@ export function prevent(fn: (event: Event) => any) {
   };
 }
 
-function findActive(currentRoute: URL, routes: Map<string, RouteMatcher>) {
-  for (const [route, matcher] of routes.entries()) {
+function findActive(currentRoute: URL, routes: Record<string, RouteMatcher>) {
+  for (const [route, matcher] of Object.entries(routes)) {
     const doesMatch = !!matcher.pattern.test(currentRoute.pathname);
 
     if (doesMatch) {
