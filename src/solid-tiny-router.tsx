@@ -7,9 +7,13 @@ import {
   unwrap,
 } from 'solid-js'
 import { spread } from 'solid-js/dom'
-
 import match from 'regexparam'
+
 import { createHistory } from './history'
+
+// ---
+// STATE
+// ---
 
 const browser = createHistory()
 const currentRoute = browser.location
@@ -42,11 +46,19 @@ const store = [
 
 const RouterContext = createContext(store)
 
+// ---
+// HOOKS
+// ---
+
 export function useRouter() {
   return useContext(RouterContext)
 }
 
-export const Router: Component = (props) => {
+// ---
+// COMPONENTS
+// ---
+
+export const Router: Component<{}> = (props) => {
   browser.listen((currentRoute) => {
     const { active, params } = findActive(
       currentRoute,
@@ -63,22 +75,30 @@ export const Route: Component<{ path: string }> = (props) => {
   const [router, { addRoute }] = useRouter()
   addRoute(props.path, match(props.path))
 
-  const isActiveRoute = () => {
-    console.log('hello???')
-    return props.path === router.active
-  }
+  const isActiveRoute = () => props.path === router.active
 
   return () => (isActiveRoute() ? props.children : false)
 }
 
+export const Redirect = (props: { path: string }) => {
+  const [_, { push }] = useRouter()
+  push(props.path)
+}
+
 export const Link: Component<LinkProps> = (props) => {
   const [p, others] = splitProps(props, ['path'])
-  const [_, { push }] = useRouter()
+  const [router, { push }] = useRouter()
   const handleClick = () => push(p.path)
 
+  const isActiveLink = () => props.path === router.active
+
   return () => {
+    const activeClass = props['active-class']
+      ? { [props['active-class']]: isActiveLink() }
+      : {}
+
     const el = (
-      <a href={p.path} onClick={prevent(handleClick)}>
+      <a href={p.path} onClick={prevent(handleClick)} classList={activeClass}>
         {props.children}
       </a>
     )
@@ -131,13 +151,14 @@ function exec(path: string, result: RouteMatcher) {
 // TYPES
 // ---
 
-export type LinkProps = { path: string } & JSX.AnchorHTMLAttributes<
-  HTMLAnchorElement
->
+export type LinkProps = {
+  path: string
+  'active-class'?: string
+} & JSX.AnchorHTMLAttributes<HTMLAnchorElement>
 
-type RouteMatcher = OverloadedReturnType<typeof match>
+export type RouteMatcher = OverloadedReturnType<typeof match>
 
-interface RouterState {
+export interface RouterState {
   currentRoute: URL
   routes: Map<string, RouteMatcher>
   params: Record<string, string | null>
