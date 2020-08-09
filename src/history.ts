@@ -1,4 +1,4 @@
-import mitt from "mitt";
+import mitt from 'mitt';
 
 export function createHistory() {
   const emitter = mitt();
@@ -6,22 +6,22 @@ export function createHistory() {
   const { protocol, hostname } = document.location;
   const baseUrl = `${protocol}//${hostname}`;
 
-  emitter.on("navigate", (url: any) => {
+  emitter.on('navigate', (url: any) => {
     location = url;
   });
 
   function trigger() {
-    emitter.emit("navigate", new URL(document.location.href));
+    emitter.emit('navigate', new URL(document.location.href));
   }
 
   function listen(listener: (url: URL) => void) {
-    emitter.on<any>("navigate", listener);
+    emitter.on<any>('navigate', listener);
   }
 
   function push(path: string, state: Record<string, any> = {}) {
     const url = new URL(`${baseUrl}/${path}`);
     if (location.toString() === url.toString()) return;
-    window.history.pushState(state, "", `/${path}`);
+    window.history.pushState(state, '', `/${path}`);
     trigger();
   }
 
