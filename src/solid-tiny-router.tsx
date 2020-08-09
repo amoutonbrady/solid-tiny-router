@@ -6,6 +6,7 @@ import {
   splitProps,
   unwrap,
   createEffect,
+  onCleanup,
 } from 'solid-js';
 import { spread } from 'solid-js/dom';
 import match from 'regexparam';
@@ -23,7 +24,7 @@ const [routerState, setRouterState] = createState<RouterState>({
   currentRoute,
   active: '',
   params: {},
-  routes: new Map(),
+  routes: {},
 });
 
 const store = [
@@ -33,8 +34,19 @@ const store = [
       browser.push(path);
     },
     addRoute(path: string, matcher: RouteMatcher) {
-      setRouterState((state) => {
-        state.routes.set(path, matcher);
+      setRouterState('routes', (routes) => ({ ...unwrap(routes), [path]: matcher }));
+      const { active, params } = findActive(
+        unwrap(routerState.currentRoute),
+        unwrap(routerState.routes),
+      );
+      setRouterState({ active, params });
+    },
+    removeRoute(path: string) {
+      setRouterState('routes', (routes) => {
+        return Object.entries(routes).reduce((acc, [route, matcher]) => {
+          if (route === path) return acc;
+          return { ...acc, [route]: matcher };
+        }, {});
       });
       const { active, params } = findActive(
         unwrap(routerState.currentRoute),
@@ -69,15 +81,17 @@ export const Router: Component<{}> = (props) => {
 };
 
 export const Route: Component<{ path: string }> = (props) => {
-  const [router, { addRoute }] = useRouter();
+  const [router, { addRoute, removeRoute }] = useRouter();
   addRoute(normalizePath(props.path), match(normalizePath(props.path)));
 
   const isActiveRoute = () => normalizePath(props.path) === router.active;
 
+  onCleanup(() => removeRoute(normalizePath(props.path)));
+
   return () => (isActiveRoute() ? props.children : false);
 };
 
-export const Redirect = (props: { path: string; to: string }) => {
+export const Redirect: Component<{ path: string; to: string }> = (props) => {
   const [router, { push }] = useRouter();
 
   const isActiveRoute = () => normalizePath(props.path) === router.active;
@@ -85,17 +99,19 @@ export const Redirect = (props: { path: string; to: string }) => {
   createEffect(() => {
     if (isActiveRoute()) push(normalizePath(props.to));
   });
+
+  return false;
 };
 
 export const Link: Component<LinkProps> = (props) => {
-  const [p, others] = splitProps(props, ['path']);
+  const [p, others] = splitProps(props, ['path', 'active-class']);
   const [router, { push }] = useRouter();
   const handleClick = () => push(p.path);
 
   const isActiveLink = () => normalizePath(p.path) === router.active;
 
   return () => {
-    const activeClass = props['active-class'] ? { [props['active-class']]: isActiveLink() } : {};
+    const activeClass = p['active-class'] ? { [p['active-class']]: isActiveLink() } : {};
 
     const el = (
       <a href={normalizePath(p.path)} onClick={prevent(handleClick)} classList={activeClass}>
@@ -164,7 +180,7 @@ export type RouteMatcher = OverloadedReturnType<typeof match>;
 
 export interface RouterState {
   currentRoute: URL;
-  routes: Map<string, RouteMatcher>;
+  routes: Record<string, RouteMatcher>;
   params: Record<string, string | null>;
   active: string;
 }
