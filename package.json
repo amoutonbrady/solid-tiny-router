@@ -1,6 +1,6 @@
 {
   "name": "@amoutonbrady/solid-tiny-router",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Tiny Router for Solid",
   "main": "dist/solid-tiny-router.cjs.js",
   "module": "dist/solid-tiny-router.esm.js",
