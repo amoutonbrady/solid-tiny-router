@@ -1,25 +1,27 @@
-import { babel } from "@rollup/plugin-babel";
-import resolve from "@rollup/plugin-node-resolve";
+// @ts-check
+import { babel } from '@rollup/plugin-babel';
+import resolve from '@rollup/plugin-node-resolve';
+import pkg from './package.json';
 
-const extensions = [".tsx", ".ts"];
+const extensions = ['.tsx', '.ts'];
 
 /**
  * @type {import('rollup').RollupOptions}
  */
 const config = {
-  input: "src/solid-tiny-router.tsx",
+  input: 'src/solid-tiny-router.tsx',
   treeshake: true,
-  external: [/@babel\/runtime/, /solid-js/, /regexparam/, /mitt/],
+  external: [...Object.keys(pkg.dependencies), 'solid-js/dom'],
   output: [
     {
-      name: "solid-tiny-router",
-      file: "dist/solid-tiny-router.cjs.js",
-      format: "cjs",
+      name: pkg.name,
+      file: pkg.main,
+      format: 'cjs',
     },
     {
-      name: "solid-tiny-router",
-      file: "dist/solid-tiny-router.esm.js",
-      format: "esm",
+      name: pkg.name,
+      file: pkg.module,
+      format: 'esm',
     },
   ],
   plugins: [
@@ -28,10 +30,10 @@ const config = {
     }),
     babel({
       extensions,
-      babelHelpers: "runtime",
-      exclude: "node_modules/**",
-      presets: ["babel-preset-solid", "@babel/preset-typescript"],
-      plugins: ["@babel/plugin-transform-runtime"],
+      babelHelpers: 'runtime',
+      exclude: 'node_modules/**',
+      presets: ['babel-preset-solid', '@babel/preset-typescript'],
+      plugins: ['@babel/plugin-transform-runtime'],
     }),
   ],
 };

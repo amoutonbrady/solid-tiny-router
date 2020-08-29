@@ -9,7 +9,8 @@
     "declarationDir": "./types",
     "emitDeclarationOnly": true,
     "strict": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "resolveJsonModule": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "**/__tests__/*"]

@@ -4,11 +4,10 @@ import {
   Component,
   useContext,
   splitProps,
-  unwrap,
   createEffect,
-  onCleanup,
+  State,
 } from 'solid-js';
-import { spread } from 'solid-js/dom';
+import { Match, Switch } from 'solid-js/dom';
 import match from 'regexparam';
 
 import { createHistory } from './history';
@@ -17,47 +16,32 @@ import { createHistory } from './history';
 // STATE
 // ---
 
-const browser = createHistory();
-const currentRoute = browser.location;
+const createRouter = () => {
+  const browser = createHistory();
+  const currentRoute = browser.location;
 
-const [routerState, setRouterState] = createState<RouterState>({
-  currentRoute,
-  active: '',
-  params: {},
-  routes: {},
-});
+  const [routerState, setRouterState] = createState<RouterState>({
+    currentRoute,
+    params: {},
+    routes: {},
+  });
 
-const store = [
-  routerState,
-  {
-    push: (path: string) => {
-      browser.push(path);
+  const store = [
+    routerState,
+    {
+      push: (path: string) => browser.push(path),
+      setParams: (params: Record<string, any>) => setRouterState({ params }),
     },
-    addRoute(path: string, matcher: RouteMatcher) {
-      setRouterState('routes', (routes) => ({ ...unwrap(routes), [path]: matcher }));
-      const { active, params } = findActive(
-        unwrap(routerState.currentRoute),
-        unwrap(routerState.routes),
-      );
-      setRouterState({ active, params });
-    },
-    removeRoute(path: string) {
-      setRouterState('routes', (routes) => {
-        return Object.entries(routes).reduce((acc, [route, matcher]) => {
-          if (route === path) return acc;
-          return { ...acc, [route]: matcher };
-        }, {});
-      });
-      const { active, params } = findActive(
-        unwrap(routerState.currentRoute),
-        unwrap(routerState.routes),
-      );
-      setRouterState({ active, params });
-    },
-  },
-] as const;
+  ] as const;
 
-const RouterContext = createContext(store);
+  browser.listen((currentRoute) => setRouterState({ currentRoute }));
+
+  return store;
+};
+
+type TState = ReturnType<typeof createRouter>;
+
+const RouterContext = createContext<TState>();
 
 // ---
 // HOOKS
@@ -72,57 +56,64 @@ export function useRouter() {
 // ---
 
 export const Router: Component<{}> = (props) => {
-  browser.listen((currentRoute) => {
-    const { active, params } = findActive(currentRoute, unwrap(routerState.routes));
-    setRouterState({ currentRoute, active, params });
-  });
+  const store = createRouter();
 
-  return () => RouterContext.Provider({ value: store, children: props.children });
+  return (
+    <RouterContext.Provider value={store}>
+      <Switch>{props.children}</Switch>
+    </RouterContext.Provider>
+  );
 };
 
 export const Route: Component<{ path: string }> = (props) => {
-  const [router, { addRoute, removeRoute }] = useRouter();
-  addRoute(normalizePath(props.path), match(normalizePath(props.path)));
+  const [router, { setParams }] = useRouter();
 
-  const isActiveRoute = () => normalizePath(props.path) === router.active;
+  const isActiveRoute = () => {
+    const url = normalizePath(router.currentRoute);
+    const matcher = match(props.path);
+    const isActive = matcher.pattern.test(url);
+    const params = exec(url, matcher);
+    setParams(params);
+    return isActive;
+  };
 
-  onCleanup(() => removeRoute(normalizePath(props.path)));
-
-  return () => (isActiveRoute() ? props.children : false);
+  return <Match when={isActiveRoute()}>{props.children}</Match>;
 };
 
 export const Redirect: Component<{ path: string; to: string }> = (props) => {
   const [router, { push }] = useRouter();
 
-  const isActiveRoute = () => normalizePath(props.path) === router.active;
+  const isActiveRoute = () => {
+    const url = normalizePath(router.currentRoute);
+    const matcher = match(props.path);
+    const isActive = matcher.pattern.test(url);
+    return isActive;
+  };
 
   createEffect(() => {
-    if (isActiveRoute()) push(normalizePath(props.to));
+    if (isActiveRoute()) push(props.to);
   });
 
   return false;
 };
 
 export const Link: Component<LinkProps> = (props) => {
-  const [p, others] = splitProps(props, ['path', 'active-class']);
+  const [internal, external] = splitProps(props, ['path', 'active-class']);
   const [router, { push }] = useRouter();
-  const handleClick = () => push(p.path);
 
-  const isActiveLink = () => normalizePath(p.path) === router.active;
-
-  return () => {
-    const activeClass = p['active-class'] ? { [p['active-class']]: isActiveLink() } : {};
-
-    const el = (
-      <a href={normalizePath(p.path)} onClick={prevent(handleClick)} classList={activeClass}>
-        {props.children}
-      </a>
-    );
-
-    spread(el as Element, others);
-
-    return el;
+  const handleClick = () => push(internal.path);
+  const activeClass = () => {
+    const url = normalizePath(router.currentRoute);
+    const matcher = match(props.path);
+    const isActive = matcher.pattern.test(url);
+    return internal['active-class'] ? { [internal['active-class']]: isActive } : {};
   };
+
+  return (
+    <a {...external} href={internal.path} onClick={prevent(handleClick)} classList={activeClass()}>
+      {props.children}
+    </a>
+  );
 };
 
 // ---
@@ -134,19 +125,6 @@ export function prevent(fn: (event: Event) => any) {
     event.preventDefault();
     fn(event);
   };
-}
-
-function findActive(currentRoute: URL, routes: Record<string, RouteMatcher>) {
-  for (const [route, matcher] of Object.entries(routes)) {
-    const doesMatch = !!matcher.pattern.test(currentRoute.pathname);
-
-    if (doesMatch) {
-      const params = exec(currentRoute.pathname, matcher);
-      return { active: route, params };
-    }
-  }
-
-  return { active: 'NOT_FOUND', params: {} };
 }
 
 // Adapted from here: https://github.com/lukeed/regexparam#usage
@@ -163,18 +141,18 @@ function exec(path: string, result: RouteMatcher) {
   return out;
 }
 
-function normalizePath(path: string) {
-  return path.startsWith('/') ? path.slice(1) : path;
+function normalizePath(route: State<URL>): string {
+  return route.href.replace(route.origin, '');
 }
 
 // ---
 // TYPES
 // ---
 
-export type LinkProps = {
+export interface LinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
   path: string;
   'active-class'?: string;
-} & JSX.AnchorHTMLAttributes<HTMLAnchorElement>;
+}
 
 export type RouteMatcher = OverloadedReturnType<typeof match>;
 
@@ -182,7 +160,6 @@ export interface RouterState {
   currentRoute: URL;
   routes: Record<string, RouteMatcher>;
   params: Record<string, string | null>;
-  active: string;
 }
 
 // Utility types from: https://stackoverflow.com/a/52761156
