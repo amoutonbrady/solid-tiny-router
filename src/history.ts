@@ -1,10 +1,9 @@
 import mitt from 'mitt';
 
-export function createHistory() {
+export function createHistory(initialRoute?: string) {
   const emitter = mitt();
-  let location = new URL(document.location.href);
-  const { protocol, hostname } = document.location;
-  const baseUrl = `${protocol}//${hostname}`;
+  let location = new URL(initialRoute || document.location.href);
+  const baseUrl = location.origin;
 
   emitter.on('navigate', (url: any) => {
     location = url;
@@ -19,9 +18,9 @@ export function createHistory() {
   }
 
   function push(path: string, state: Record<string, any> = {}) {
-    const url = new URL(`${baseUrl}/${path}`);
+    const url = new URL(baseUrl + path);
     if (location.toString() === url.toString()) return;
-    window.history.pushState(state, '', `/${path}`);
+    window.history.pushState(state, '', path);
     trigger();
   }
 

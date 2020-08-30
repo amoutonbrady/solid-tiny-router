@@ -13,6 +13,7 @@ pnpm add @amoutonbrady/solid-tiny-router
 Use it:
 
 ```tsx
+import { render} from 'solid-js/dom';
 import { Component, lazy } from 'solid-js';
 import { useAuth } from './fake-auth.ts';
 // Minimal exports
@@ -27,36 +28,37 @@ const App: Component = () => {
   const [router, { push }] = useRouter();
 
   return (
-    <Router>
+    <>
       {/* This is a reactive URL Object, you can retrieve searchParams, pathname & hash from it */}
       <p>{router.currentRoute.pathname}</p>
 
       {/* Link */}
       <Link path="/" class="text-blue-700" active-class="underline">Home</Link>
       <Link path="/about">About</Link>
-      <button onClick={(_) => push('/')}>Navigate without a link</button>
+      <button onClick={[push, '/']}>Navigate without a link</button>
+
       <hr />
 
-      {/* Routes, pretty much just a wrapper around <Show> that display the content only if the route match the path your provide */}
-      <Route path="/" children={Home} />
-      <Route path="/about">
-        <p>Sweet about</p>
-      </Route>
-      <Route path="/user/:id">This the user {router.params.id}<Route>
-
-      {/* This is how you'd add a guard to authenticated only routes */}
-      <Show when={auth.isLoggedIn()}>
-        <Route path="/admin">Admin route</Route>
-        <Redirect path="/login" to="/admin" />
-      </Show>
-
       {/* Catch all route */}
-      <Route path="*">404 not found</Route>
-      {/* You can also do that if you want to retrive the url */}
-      <Route path=":url">{router.params.url} not found</Route>
-    </Router>
+      <Switch fallback={<p>404 not found</p>}>
+        {/* Routes, pretty much just a wrapper around <Match> that display the content only if the route match the path your provide */}
+        <Route path="/" children={Home} />
+        <Route path="/about">
+          <p>Sweet about</p>
+        </Route>
+        <Route path="/user/:id">This the user {router.params.id}<Route>
+
+        {/* This is how you'd add a guard to authenticated only routes */}
+        <Match when={auth.isLoggedIn()}>
+          <Switch>
+            <Route path="/admin">Admin route</Route>
+            <Redirect path="/login" to="/admin" />
+          </Switch>
+        </Match>
+      </Switch>
+    </>
   );
 };
 
-export default App;
+render(() => <Router><App /></Router>, document.getElementById('app'))
 ```

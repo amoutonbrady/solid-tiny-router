@@ -7,7 +7,7 @@ import {
   createEffect,
   State,
 } from 'solid-js';
-import { Match, Switch } from 'solid-js/dom';
+import { Match } from 'solid-js/dom';
 import match from 'regexparam';
 
 import { createHistory } from './history';
@@ -16,14 +16,14 @@ import { createHistory } from './history';
 // STATE
 // ---
 
-const createRouter = () => {
-  const browser = createHistory();
+const createRouter = (initialRoute?: string) => {
+  const browser = createHistory(initialRoute);
   const currentRoute = browser.location;
 
   const [routerState, setRouterState] = createState<RouterState>({
     currentRoute,
     params: {},
-    routes: {},
+    query: computeSearchParams(currentRoute),
   });
 
   const store = [
@@ -34,14 +34,17 @@ const createRouter = () => {
     },
   ] as const;
 
-  browser.listen((currentRoute) => setRouterState({ currentRoute }));
+  browser.listen((currentRoute) =>
+    setRouterState({
+      currentRoute,
+      query: computeSearchParams(currentRoute),
+    }),
+  );
 
   return store;
 };
 
-type TState = ReturnType<typeof createRouter>;
-
-const RouterContext = createContext<TState>();
+const RouterContext = createContext<RouterContextState>();
 
 // ---
 // HOOKS
@@ -55,24 +58,16 @@ export function useRouter() {
 // COMPONENTS
 // ---
 
-export const Router: Component<{}> = (props) => {
-  const store = createRouter();
+export const RouterProvider: Component<{ initialRoute?: string }> = (props) => {
+  const store = createRouter(props.initialRoute);
 
-  return (
-    <RouterContext.Provider value={store}>
-      <Switch>{props.children}</Switch>
-    </RouterContext.Provider>
-  );
+  return <RouterContext.Provider value={store}>{props.children}</RouterContext.Provider>;
 };
 
 export const Route: Component<{ path: string }> = (props) => {
-  const [router, { setParams }] = useRouter();
-
+  const [_, { setParams }] = useRouter();
   const isActiveRoute = () => {
-    const url = normalizePath(router.currentRoute);
-    const matcher = match(props.path);
-    const isActive = matcher.pattern.test(url);
-    const params = exec(url, matcher);
+    const { isActive, params } = determineActiveRoute(props.path);
     setParams(params);
     return isActive;
   };
@@ -81,31 +76,21 @@ export const Route: Component<{ path: string }> = (props) => {
 };
 
 export const Redirect: Component<{ path: string; to: string }> = (props) => {
-  const [router, { push }] = useRouter();
+  const [_, { push }] = useRouter();
+  const isActiveRoute = () => determineActiveRoute(props.path).isActive;
 
-  const isActiveRoute = () => {
-    const url = normalizePath(router.currentRoute);
-    const matcher = match(props.path);
-    const isActive = matcher.pattern.test(url);
-    return isActive;
-  };
+  createEffect(() => isActiveRoute() && push(props.to));
 
-  createEffect(() => {
-    if (isActiveRoute()) push(props.to);
-  });
-
-  return false;
+  return <Match when={isActiveRoute()}>{false}</Match>;
 };
 
 export const Link: Component<LinkProps> = (props) => {
   const [internal, external] = splitProps(props, ['path', 'active-class']);
-  const [router, { push }] = useRouter();
+  const [_, { push }] = useRouter();
 
   const handleClick = () => push(internal.path);
   const activeClass = () => {
-    const url = normalizePath(router.currentRoute);
-    const matcher = match(props.path);
-    const isActive = matcher.pattern.test(url);
+    const { isActive } = determineActiveRoute(props.path);
     return internal['active-class'] ? { [internal['active-class']]: isActive } : {};
   };
 
@@ -145,9 +130,26 @@ function normalizePath(route: State<URL>): string {
   return route.href.replace(route.origin, '');
 }
 
+function determineActiveRoute(path: string) {
+  const [router] = useRouter();
+
+  const url = normalizePath(router.currentRoute);
+  const matcher = match(path);
+  const isActive = matcher.pattern.test(url);
+  const params = exec(url, matcher);
+
+  return { isActive, params };
+}
+
+function computeSearchParams(url: URL): Record<string, string> {
+  return Object.fromEntries(url.searchParams.entries());
+}
+
 // ---
 // TYPES
 // ---
+
+export type RouterContextState = ReturnType<typeof createRouter>;
 
 export interface LinkProps extends JSX.AnchorHTMLAttributes<HTMLAnchorElement> {
   path: string;
@@ -158,14 +160,14 @@ export type RouteMatcher = OverloadedReturnType<typeof match>;
 
 export interface RouterState {
   currentRoute: URL;
-  routes: Record<string, RouteMatcher>;
   params: Record<string, string | null>;
+  query: Record<string, string>;
 }
 
 // Utility types from: https://stackoverflow.com/a/52761156
 // prettier-ignore
 type OverloadedReturnType<T> = 
-    T extends { (...args: any[]) : infer R; (...args: any[]) : infer R; (...args: any[]) : infer R ; (...args: any[]) : infer R } ? R  :
-    T extends { (...args: any[]) : infer R; (...args: any[]) : infer R; (...args: any[]) : infer R } ? R  :
-    T extends { (...args: any[]) : infer R; (...args: any[]) : infer R } ? R  :
-    T extends (...args: any[]) => infer R ? R : any
+      T extends { (...args: any[]) : infer R; (...args: any[]) : infer R; (...args: any[]) : infer R ; (...args: any[]) : infer R } ? R  :
+      T extends { (...args: any[]) : infer R; (...args: any[]) : infer R; (...args: any[]) : infer R } ? R  :
+      T extends { (...args: any[]) : infer R; (...args: any[]) : infer R } ? R  :
+      T extends (...args: any[]) => infer R ? R : any
