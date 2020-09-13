@@ -9,6 +9,8 @@ export function createHistory(initialRoute?: string) {
     location = url;
   });
 
+  if (window) window.addEventListener('popstate', trigger);
+
   function trigger() {
     emitter.emit('navigate', new URL(document.location.href));
   }
