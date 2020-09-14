@@ -62,3 +62,9 @@ const App: Component = () => {
 
 render(() => <Router><App /></Router>, document.getElementById('app'))
 ```
+
+## Live examples
+
+- [Basic routes](https://codesandbox.io/s/amoutonbradysolid-tiny-router-basic-routes-clwwp)
+- [Nested routes](https://codesandbox.io/s/amoutonbradysolid-tiny-router-nested-routes-owc9p)
+- [Authenticated routes](https://codesandbox.io/s/amoutonbradysolid-tiny-router-authenticated-routes-j5mp7?file=/src/index.tsx)
