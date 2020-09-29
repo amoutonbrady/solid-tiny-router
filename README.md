@@ -1,6 +1,6 @@
 # Solid Tiny Router
 
-Experimental and personal tiny little router based on [history](https://github.com/ReactTraining/history) & [regexparam](https://github.com/lukeed/regexparam) for [solid](https://github.com/ryansolid/solid)
+Experimental and personal tiny little router based on [regexparam](https://github.com/lukeed/regexparam) for [solid](https://github.com/ryansolid/solid)
 
 ## Quick start
 
