@@ -1,3 +1,6 @@
+This library was an experiment. Routing is a complexe mechanic if you want to include everything out of the box. I wasn't able to achieve what I wanted.
+There's a better alternative out there in the form of [solid-router by Rturnq](https://github.com/rturnq/solid-router) with similar API.
+
 # Solid Tiny Router
 
 Experimental and personal tiny little router based on [regexparam](https://github.com/lukeed/regexparam) for [solid](https://github.com/ryansolid/solid)
